@@ -2,8 +2,29 @@ from flask import Blueprint, render_template
 from flask import render_template
 from models import Post, Tag
 from flask import request
+from .forms import PostForm
+from app import db
+from flask import redirect
+from flask import url_for
+
 
 posts = Blueprint('posts', __name__, template_folder='templates')
+
+@posts.route('/create', methods=['POST', 'GET'])
+def create_post():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        body = request.form.get('body')
+        try:
+            post = Post(title=title, body=body)
+            db.session.add(post)
+            db.session.commit()
+        except:
+            print('db error')
+        return redirect( url_for('posts.index') )
+    form = PostForm()
+    return render_template('posts/create_post.html', form=form)
+
 
 @posts.route('/')
 def index():
@@ -11,7 +32,7 @@ def index():
     if q:
         posts = Post.query.filter(Post.title.contains(q) | Post.body.contains(q)).all()
     else:
-        posts = Post.query.all()
+        posts = Post.query.order_by(Post.created.desc())
     return render_template('posts/index.html', posts=posts)
 
 @posts.route('/<slug>')
